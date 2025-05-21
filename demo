@@ -1,0 +1,72 @@
+/*
+Robert Thomas
+May 2, 2025
+This program is meant to serve as a starting place for the
+product demo for the December expo. It hasn't been tested yet.
+It's based on the design schematic for the control system.
+*/
+// Pin Definitions
+const int pinChargeRelay = 5;
+const int pinGridRelay = 6;
+const int pinLedFault = 13;
+// Simulated sensor inputs
+const int pinVoltage = A0;
+const int pinCurrent = A1;
+const int pinTemp = A2;
+// Thresholds (example values)
+const float maxVoltage = 12.6;
+const float minVoltage = 10.5;
+const float maxTemp = 50.0;
+enum SystemState { CHARGING, DISCHARGING, FAULT };
+SystemState currentState;
+void setup() {
+Serial.begin(9600);
+pinMode(pinChargeRelay, OUTPUT);
+pinMode(pinGridRelay, OUTPUT);
+pinMode(pinLedFault, OUTPUT);
+// Initialize all relays OFF
+digitalWrite(pinChargeRelay, LOW);
+digitalWrite(pinGridRelay, LOW);
+digitalWrite(pinLedFault, LOW);
+}
+void loop() {
+float voltage = readVoltage();
+float temp = readTemperature();
+// Fault Detection
+if (voltage > maxVoltage || voltage < minVoltage || temp > maxTemp) {
+currentState = FAULT;
+} else if (voltage < 11.8) {
+currentState = CHARGING;
+} else if (voltage >= 11.8 && voltage <= 12.6) {
+currentState = DISCHARGING;
+}
+handleState(currentState);
+delay(1000); // simple delay loop
+}
+void handleState(SystemState state) {
+switch (state) {
+case CHARGING:
+digitalWrite(pinGridRelay, LOW); // Disconnect from grid
+digitalWrite(pinChargeRelay, HIGH); // Enable charging
+digitalWrite(pinLedFault, LOW);
+break;
+case DISCHARGING:
+digitalWrite(pinChargeRelay, LOW); digitalWrite(pinGridRelay, HIGH); digitalWrite(pinLedFault, LOW);
+break;
+// Disconnect from charger
+// Enable grid discharge
+case FAULT:
+digitalWrite(pinChargeRelay, LOW);
+digitalWrite(pinGridRelay, LOW);
+digitalWrite(pinLedFault, HIGH); break;
+// Trigger fault alert
+}
+}
+float readVoltage() {
+int raw = analogRead(pinVoltage);
+return map(raw, 0, 1023, 0, 15); // simulate 0–15V
+}
+float readTemperature() {
+int raw = analogRead(pinTemp);
+return map(raw, 0, 1023, 0, 100); // simulate 0–100°C
+}
